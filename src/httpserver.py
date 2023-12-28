@@ -6,6 +6,11 @@ import os
 
 luaDirectory = "/home/brendoncintas/.config/rpcs3/dev_hdd0/game/NPIA00010/USRDIR/MINIGAMES/FLYING_SAUCER/"
 
+def formatResponse(data):
+    luaEncodeCode = f"print(Jamin.encode({json.dumps(data)}))"
+    jaminEncodedData = runLuaScript(luaEncodeCode)
+    return f"<ohs>{jaminEncodedData}</ohs>"
+
 def runLuaScript(luaCode):
 
     luaFiles = [f for f in os.listdir(luaDirectory) if f.endswith('.lua')]
@@ -16,11 +21,6 @@ def runLuaScript(luaCode):
     result = subprocess.run(['lua', '-e', luaFull], capture_output=True, text=True)
     return result.stdout.strip()
 
-def formatResponse(data):
-    luaEncodeCode = f"print(encode({json.dumps(data)}))"
-    jaminEncodedData = runLuaScript(luaEncodeCode)
-    return f"<ohs>{jaminEncodedData}</ohs>"
-
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
@@ -28,19 +28,15 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.handleRequestByRank()
         elif self.path.startswith("/SCEA/SaucerPop/user/getwritekey/"):
             self.handleGetWriteKey()
-        elif self.path.startswith("/SCEA/SaucerPop/leaderboard/requestbyrank/"):
+        elif self.path.startswith("/SCEA/SaucerPop/leaderboard/updatesameentry/"):
             self.handleUpdateSameEntry()
 
     def handleUpdateSameEntry(self):
         contentLength = int(self.headers['Content-Length'])
-        postData = self.rfile.read(contentLength)
-        data = urllib.parse.parse_qs(postData.decode())
+        postData = self.rfile.read(contentLength).decode('utf-8')
+        print("Raw POST Data:", postData)
 
-        # Process the data here. For demonstration, just print the data.
-        print("Received data for updatessameentry:", data)
-
-        # Respond with a success message or appropriate response
-        response = formatResponse({"status": "success", "message": "Update processed"})
+        response = formatResponse(postData)
         self.send_response(200)
         self.send_header('Content-type', 'application/xml')
         self.end_headers()
@@ -49,7 +45,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def handleGetWriteKey(self):
         writeKey = "static-key"  # In a real application, this should be generated or retrieved securely.
         responseData = {"writeKey": writeKey}
-
+        print(b"Response Data:", responseData)
         response = formatResponse(responseData)
         self.send_response(200)
         self.send_header('Content-type', 'application/xml')
@@ -58,8 +54,10 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def handleRequestByRank(self):
         contentLength = int(self.headers['Content-Length'])
-        postData = self.rfile.read(contentLength)
-        leaderboardType = urllib.parse.parse_qs(postData.decode()).get('type', ['alltime'])[0]
+        postData = self.rfile.read(contentLength).decode('utf-8')
+        print(b"Raw POST Data:", postData)
+
+        leaderboardType = urllib.parse.parse_qs(postData).get('type', ['alltime'])[0]
 
         if leaderboardType == 'daily':
             luaLeaderboardCode = "print(getDailyLeaderboard())"
@@ -73,6 +71,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'application/xml')
         self.end_headers()
         self.wfile.write(response.encode())
+
 
 if __name__ == '__main__':
     serverAddress = ('localhost', 8080)
