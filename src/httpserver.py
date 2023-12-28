@@ -4,16 +4,7 @@ import urllib.parse
 import json
 import os
 
-# jaminLuaPath = "/home/brendoncintas/.config/rpcs3/dev_hdd0/game/NPIA00010/USRDIR/MINIGAMES/FLYING_SAUCER/JAMIN.LUA"
-# saucerLeaderboardLuaPath = "/home/brendoncintas/.config/rpcs3/dev_hdd0/game/NPIA00010/USRDIR/MINIGAMES/FLYING_SAUCER/SAUCERLEADERBOARD.LUA"
-luaDirectory = "~/.config/rpcs3/dev_hdd0/game/NPIA00010/USRDIR/MINIGAMES/FLYING_SAUCER/"
-
-""" # Function to run Lua script
-def runLuaScript(luaCode):
-    command = f"require '{os.path.abspath(jaminLuaPath).replace(os.sep, '/')}'\n" \
-              f"require '{os.path.abspath(saucerLeaderboardLuaPath).replace(os.sep, '/')}'\n{luaCode}"
-    result = subprocess.run(['lua', '-e', command], capture_output=True, text=True)
-    return result.stdout.strip() """
+luaDirectory = "/home/brendoncintas/.config/rpcs3/dev_hdd0/game/NPIA00010/USRDIR/MINIGAMES/FLYING_SAUCER/"
 
 def runLuaScript(luaCode):
 
@@ -35,6 +26,35 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path.startswith("/SCEA/SaucerPop/leaderboard/requestbyrank/"):
             self.handleRequestByRank()
+        elif self.path.startswith("/SCEA/SaucerPop/user/getwritekey/"):
+            self.handleGetWriteKey()
+        elif self.path.startswith("/SCEA/SaucerPop/leaderboard/requestbyrank/"):
+            self.handleUpdateSameEntry()
+
+    def handleUpdateSameEntry(self):
+        contentLength = int(self.headers['Content-Length'])
+        postData = self.rfile.read(contentLength)
+        data = urllib.parse.parse_qs(postData.decode())
+
+        # Process the data here. For demonstration, just print the data.
+        print("Received data for updatessameentry:", data)
+
+        # Respond with a success message or appropriate response
+        response = formatResponse({"status": "success", "message": "Update processed"})
+        self.send_response(200)
+        self.send_header('Content-type', 'application/xml')
+        self.end_headers()
+        self.wfile.write(response.encode())
+
+    def handleGetWriteKey(self):
+        writeKey = "static-key"  # In a real application, this should be generated or retrieved securely.
+        responseData = {"writeKey": writeKey}
+
+        response = formatResponse(responseData)
+        self.send_response(200)
+        self.send_header('Content-type', 'application/xml')
+        self.end_headers()
+        self.wfile.write(response.encode())
 
     def handleRequestByRank(self):
         contentLength = int(self.headers['Content-Length'])
